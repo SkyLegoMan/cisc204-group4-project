@@ -1,0 +1,1 @@
+docker run -it -v $(pwd):/cisc204-group4-project cisc204 /bin/bash
