@@ -9,6 +9,14 @@ config.sat_backend = "kissat"
 # Encoding that will store all of your constraints
 E = Encoding()
 
+
+# TODO: Make the player numbers into a dictionary, to account for player wins
+
+PLAYER_NUMBER=[1,2,3,4] 
+CARD_SUITS=['Swords', 'Cups', 'Clubs' 'Coins']
+CARD_VALUES=['2','4','5','6','7','J','H','K','3','A']
+
+
 # To create propositions, create classes for them first, annotated with "@proposition" and the Encoding
 @proposition(E)
 class BasicPropositions:
