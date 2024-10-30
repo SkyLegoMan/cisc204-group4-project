@@ -17,7 +17,6 @@ PLAYER_NUMBER={'P1':0,'P2':0,'P3':0,'P4':0}
 CARD_SUITS=['Swords', 'Cups', 'Clubs' 'Coins']
 
 CARD_VALUES=['2','4','5','6','7','J','H','K','3','A']
-VALUES=list(range(0,10))
 
 TRICK_NUMBER=0
 
@@ -36,6 +35,7 @@ CARDS_IN_PLAY=["7 of Cups", "Horseman of Swords", "Jack of Clubs", "3 of Coins"]
 
 
 # New proposition to say the one value is greater than another value or not between 2 values
+@proposition(E)
 class val_is_greater:
 
     def __init__(self, val1, val2) -> None:
@@ -55,12 +55,13 @@ class card_is_brisc:
         assert card in CARDS
         assert brisc_suit in CARD_SUITS
         self.card = card
-        self.val2 = brisc_suit
+        self.brisc_suit = brisc_suit
 
     def _prop_name(self):
-        return f"{self.card['suit']} is apart of {self.val2}, the current briscola suit."
+        return f"{CARDS[self.card]['suit']} is apart of {self.brisc_suit}, the current briscola suit."
 
 # New proposition to say that a card is the same suit as another card or not between two cards
+@proposition(E)
 class card_is_same_suit:
 
     def __init__(self, card1, card2) -> None:
@@ -74,18 +75,20 @@ class card_is_same_suit:
     
 
 # New proposition to say that a card beats another card or not between two cards
+@proposition(E)
 class card_beats_card:
 
     def __init__(self, card1, card2) -> None:
-        assert card1 in CARD_VALUES
-        assert card2 in CARD_VALUES
-        self.val1 = card1
-        self.val2 = card2
+        assert card1 in CARDS
+        assert card2 in CARDS
+        self.card1 = card1
+        self.card2 = card2
 
     def _prop_name(self):
         return f"{self.card1} beats {self.card2}"
     
 # New proposition to say that a player wins a trick, given a round configuration and player.
+@proposition(E)
 class player_wins_trick:
 
     def __init__(self, cards_in_play, player) -> None:
@@ -98,26 +101,6 @@ class player_wins_trick:
     def _prop_name(self):
         return f"{self.player} wins the trick of configuration {self.cards_in_play}"
 
-# Different classes for propositions are useful because this allows for more dynamic constraint creation
-# for propositions within that class. For example, you can enforce that "at least one" of the propositions
-# that are instances of this class must be true by using a @constraint decorator.
-# other options include: at most one, exactly one, at most k, and implies all.
-# For a complete module reference, see https://bauhaus.readthedocs.io/en/latest/bauhaus.html
-@constraint.at_least_one(E)
-@proposition(E)
-class FancyPropositions:
-
-    def __init__(self, data):
-        self.data = data
-
-    def _prop_name(self):
-        return f"A.{self.data}"
-
-# At least one of these will be true
-x = FancyPropositions("x")
-y = FancyPropositions("y")
-z = FancyPropositions("z")
-
 
 # Build an example full theory for your setting and return it.
 #
@@ -128,28 +111,24 @@ def example_theory():
 
     #TODO: Address equal cases (What is Sword 2 = Coin 2 somehow)
 
-    # Initalizes the first few values
+    # Initalizes the base cases for card values being greater than others 
     value_propositions=[]
-    # Base Constraint: Each value in CARD_VALUES is greater than the value preceeding it.
     for i in range (0, len(CARD_VALUES) - 1):
         # For every index except the final index, say the value at i+1 is greater than the value at i+1.
-        value_propositions.append(val_is_greater(CARD_VALUES[i+1], CARD_VALUES[i]))
+        #value_propositions.append(val_is_greater(CARD_VALUES[i+1], CARD_VALUES[i]))
+        E.add_constraint(val_is_greater(CARD_VALUES[i+1], CARD_VALUES[i]))
     
-    #TODO: Find out why the constaints won't work
-    """ for val1 in CARD_VALUES:
+    # Code to ensure that values being greater follows transitive properties
+    for val1 in CARD_VALUES:
         for val2 in CARD_VALUES:
             if val1 == val2:
-                print("lmao")
                 continue
             for val3 in CARD_VALUES:
                 if val2 == val3 or val1 == val3:
-                    print("lol")
                     continue
                 # Example: 4 > 2 5 > 4 >> 5 > 2
-                print("work dammit")
                 E.add_constraint((val_is_greater(val2, val1) & val_is_greater(val3, val2)) >> val_is_greater(val3, val1))
-    """
-
+    
     for val in value_propositions:
         print(val._prop_name())
 
@@ -160,10 +139,37 @@ def example_theory():
             if card1 == card2:
                 continue
             if CARDS[card1]["suit"] == CARDS[card2]["suit"]:
-                same_suit_propositions.append(card_is_same_suit(card1, card2))
+                #same_suit_propositions.append(card_is_same_suit(card1, card2))
+                E.add_constraint(card_is_same_suit(card1, card2))
 
     for val in same_suit_propositions:
         print(val._prop_name())
+
+    # Initalizes card suits as Briscola suits or not. (also ensures that every card is unique)
+    for card in CARDS:
+        if CARDS[card]["suit"] == BRISCOLA_SUIT:
+            E.add_constraint((card_is_brisc(card, BRISCOLA_SUIT)))
+        constraint.add_exactly_one(E, card)
+
+    # Intializes if a card beats a card or not.
+    for card1 in CARDS:
+        for card2 in CARDS:
+            # Make all the propositions variables (this is just more consise, since this is a long constraint)
+            is_b = card_is_brisc(card1, BRISCOLA_SUIT)
+            same_suit = card_is_same_suit(card1, card2)
+            val_greater = val_is_greater(CARDS[card1]["value"], CARDS[card2]["value"])
+            # card1 beats card2 either if card1 is brisc and card2 is not, or if both are the same suit and card1 has a higher value.
+            E.add_constraint(((is_b & ~same_suit)| (same_suit & val_greater)) >> card_beats_card(card1, card2))
+    
+
+    #TODO: Add in code for player_wins_trick
+
+    
+
+
+    print(E.constraints)
+    
+
 
     # Add custom constraints by creating formulas with the variables you created. 
     #E.add_constraint((a | b) & ~x)
@@ -186,12 +192,12 @@ if __name__ == "__main__":
     # After compilation (and only after), you can check some of the properties
     # of your model:
     print("\nSatisfiable: %s" % T.satisfiable())
-    print("# Solutions: %d" % count_solutions(T))
+    #print("# Solutions: %d" % count_solutions(T))
     print("   Solution: %s" % T.solve())
 
-    print("\nVariable likelihoods:")
-    for v,vn in zip([a,b,c,x,y,z], 'abcxyz'):
+    #print("\nVariable likelihoods:")
+    #for v,vn in zip([a,b,c,x,y,z], 'abcxyz'):
         # Ensure that you only send these functions NNF formulas
         # Literals are compiled to NNF here
-        print(" %s: %.2f" % (vn, likelihood(T, v)))
-    print()
+    #    print(" %s: %.2f" % (vn, likelihood(T, v)))
+    #print()
