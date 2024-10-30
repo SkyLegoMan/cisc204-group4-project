@@ -1,5 +1,7 @@
+import pprint
 
-from bauhaus import Encoding, proposition, constraint
+
+from bauhaus import Encoding, proposition, constraint, And, Or
 from bauhaus.utils import count_solutions, likelihood
 
 # These two lines make sure a faster SAT solver is used.
@@ -11,8 +13,12 @@ E = Encoding()
 
 
 PLAYER_NUMBER={'P1':0,'P2':0,'P3':0,'P4':0}
+
 CARD_SUITS=['Swords', 'Cups', 'Clubs' 'Coins']
+
 CARD_VALUES=['2','4','5','6','7','J','H','K','3','A']
+VALUES=list(range(0,10))
+
 TRICK_NUMBER=0
 
 BRISCOLA_SUIT='Swords' 
@@ -21,7 +27,8 @@ BRISCOLA_SUIT='Swords'
 CARDS={"7 of Cups" : {"suit" : 'Cups', "value" : '7'}, 
        "Horseman of Swords" : {"suit" : 'Swords', "value" : 'H'},
        "Jack of Clubs" : {"suit" : 'Clubs', "value" : 'J'},
-        "3 of Coins" : {"suit" : 'Coins', "value" : '3'} }
+        "3 of Coins" : {"suit" : 'Coins', "value" : '3'},
+        "3 of Cups" : {"suit" : 'Cups', "value" : '3'} }
 
 CARDS_IN_PLAY=["7 of Cups", "Horseman of Swords", "Jack of Clubs", "3 of Coins"]
 
@@ -106,12 +113,6 @@ class FancyPropositions:
     def _prop_name(self):
         return f"A.{self.data}"
 
-# Call your variables whatever you want
-a = BasicPropositions("a")
-b = BasicPropositions("b")   
-c = BasicPropositions("c")
-d = BasicPropositions("d")
-e = BasicPropositions("e")
 # At least one of these will be true
 x = FancyPropositions("x")
 y = FancyPropositions("y")
@@ -124,15 +125,55 @@ z = FancyPropositions("z")
 #  This restriction is fairly minimal, and if there is any concern, reach out to the teaching staff to clarify
 #  what the expectations are.
 def example_theory():
+
+    #TODO: Address equal cases (What is Sword 2 = Coin 2 somehow)
+
+    # Initalizes the first few values
+    value_propositions=[]
+    # Base Constraint: Each value in CARD_VALUES is greater than the value preceeding it.
+    for i in range (0, len(CARD_VALUES) - 1):
+        # For every index except the final index, say the value at i+1 is greater than the value at i+1.
+        value_propositions.append(val_is_greater(CARD_VALUES[i+1], CARD_VALUES[i]))
+    
+    #TODO: Find out why the constaints won't work
+    """ for val1 in CARD_VALUES:
+        for val2 in CARD_VALUES:
+            if val1 == val2:
+                print("lmao")
+                continue
+            for val3 in CARD_VALUES:
+                if val2 == val3 or val1 == val3:
+                    print("lol")
+                    continue
+                # Example: 4 > 2 5 > 4 >> 5 > 2
+                print("work dammit")
+                E.add_constraint((val_is_greater(val2, val1) & val_is_greater(val3, val2)) >> val_is_greater(val3, val1))
+    """
+
+    for val in value_propositions:
+        print(val._prop_name())
+
+    # Initalize all cards with the same suit (this method will automatically make cards suits symmetric as well)
+    same_suit_propositions=[]
+    for card1 in CARDS:
+        for card2 in CARDS:
+            if card1 == card2:
+                continue
+            if CARDS[card1]["suit"] == CARDS[card2]["suit"]:
+                same_suit_propositions.append(card_is_same_suit(card1, card2))
+
+    for val in same_suit_propositions:
+        print(val._prop_name())
+
     # Add custom constraints by creating formulas with the variables you created. 
-    E.add_constraint((a | b) & ~x)
+    #E.add_constraint((a | b) & ~x)
     # Implication
-    E.add_constraint(y >> z)
-    # Negate a formula
-    E.add_constraint(~(x & y))
+    #E.add_constraint(y >> z)
+    ## Negate a formula
+    #E.add_constraint(~(x & y))
     # You can also add more customized "fancy" constraints. Use case: you don't want to enforce "exactly one"
     # for every instance of BasicPropositions, but you want to enforce it for a, b, and c.:
-    constraint.add_exactly_one(E, a, b, c)
+    #constraint.add_exactly_one(E, a, b, c)
 
     return E
 
