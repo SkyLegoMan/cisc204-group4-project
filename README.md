@@ -4,6 +4,10 @@ Welcome to the major project for CISC/CMPE 204!
 
 Change this README.md file to summarize your project, and provide pointers to the general structure of the repository. How you organize and build things (which files, how you structure things, etc) is entirely up to you! The only things you must keep in place are what is already listed in the **Structure** section below.
 
+## Summary
+The game Briscola has players play a card from their hand each round. Based on the suit of the card and the value of each card (Ace, King, etc.), a player wins a round if the card they played had the highest value and was the same suit as the first card played. In addition, at the start of the game a suit is chosen to be the “Briscola”, which ignores the requirement of the highest card needing to be the same suit as the first card played in order to win the round, but still follows the rules regarding value. The game continues until all cards have been played, with each player drawing one card at the end of each round. In a regular game of Briscola, the player with the most points at the end of all the rounds wins – based on the card values. For this project, the player who wins the most rounds wins the game instead.
+We will model if it is possible for Player-1 to win 4 of the 10 possible rounds in a game of four players. The model will be using the game configuration seen below, which shows the players’ starting hands and the Briscola suit (swords). The rest of the deck is not predetermined. 
+
 ## Structure
 
 * `documents`: Contains folders for both of your draft and final submissions. README.md files are included in both.
