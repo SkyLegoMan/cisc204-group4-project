@@ -1,16 +1,9 @@
 # Modelling Project Draft Submission
 
-You are expected to submit a draft of your project part-way through the course. This is essential for (1) making sure you make steady progress throughout the term; and (2) for the teaching staff to offer guidance so that the project is successful.
-
-Depending on the term you are in, a grade may or may not be associated with your draft (check the main project assignment for this detail). However, failing to submit this draft may result in poor performance in your final grade, as you will miss out on the critical feedback needed to make your project a success.
-
-## Expected Items
-
-* *this repository*: We will download the most recent version of your project (including this folder) on the due date.
-* `proofs.jp`: Jape file containing sequents that you intend to use (must not be final, complete, or proven).
-* `modelling_report.docx` or (`report.txt` and `report.pdf`): Include either the Word document for your documentation draft, or a link to the OverLeaf project inside of `report.txt` if that is what you chose to use for (D5). If you are using OverLeaf, include a compiled version here as `report.pdf`.
-
 ## How to Run
-* git clone the project into your bash home files. (for reference we used ubuntu).
-* using the `cd` to where `cisc204-group4-project` has been stored.
-* run the main file `run.py` in the CLT using the command `python3 run.py`
+* Use `git clone` to clone the repository into your home directory.
+* Change the directory to where `cisc204-group4-project` has been stored.
+* Run the main file `run.py` in the CLT using the command `python3 run.py`. (For reference, we used Ubuntu to run the `run.py` file).
+
+## Testing the Solver
+* In the main section of the repository, there is the `example.py` file. This file contains the current Briscola suit, the current "round suit" (the first card played, that all other played cards must match the suit of to win the trick), and the current cards in play. These values can be changed in order to change the result of the solver. Additional details are included as comments in the `example.py` file.
