@@ -15,13 +15,7 @@ E = Encoding()
 
 PLAYER_NUMBER={'P1':0,'P2':0,'P3':0,'P4':0}
 
-CARD_SUITS=['Swords', 'Cups', 'Clubs' 'Coins']
-
-CARD_VALUES=['2','4','5','6','7','J','H','K','3','A']
-
 TRICK_NUMBER=0
-
-BRISCOLA_SUIT='Swords' 
 
 # This is a fixed configuration of cards, for the sake of testing for now (CARDS would later feature every card in the deck, which will be created with a for loop)
 CARDS={"7 of Cups" : {"suit" : 'Cups', "value" : '7'}, 
@@ -30,6 +24,13 @@ CARDS={"7 of Cups" : {"suit" : 'Cups', "value" : '7'},
         "3 of Coins" : {"suit" : 'Coins', "value" : '3'},
         "3 of Cups" : {"suit" : 'Cups', "value" : '3'} }
 
+CARD_SUITS=['Swords', 'Cups', 'Clubs' 'Coins']
+
+CARD_VALUES=['2','4','5','6','7','J','H','K','3','A']
+
+# Values below are values that can be dynamically changed, via an example doc.
+BRISCOLA_SUIT='Swords'
+ROUND_SUIT='Cups'
 CARDS_IN_PLAY=["7 of Cups", "Horseman of Swords", "Jack of Clubs", "3 of Coins"]
 
 #TODO: Create a for loop that will create the card deck sequentially
@@ -60,6 +61,21 @@ class card_is_brisc:
 
     def _prop_name(self):
         return f"{CARDS[self.card]['suit']} is apart of {self.brisc_suit}, the current briscola suit."
+    
+
+# New proposition to say that a card is the current suit leading the round of the round or not
+@proposition(E)
+class card_is_suit_of_round:
+
+    def __init__(self, card, round_suit) -> None:
+        assert card in CARDS
+        assert round_suit in CARD_SUITS
+        self.card = card
+        self.round_suit = round_suit
+
+    def _prop_name(self):
+        return f"{CARDS[self.card]['suit']} is apart of {self.round_suit}, the current suit of the round."
+
 
 # New proposition to say that a card is the same suit as another card or not between two cards
 @proposition(E)
@@ -131,13 +147,23 @@ def example_theory():
                 # Constraint: If val2 > val1 and val3 > val2, then val3 must be greater than val1. (Example: 4 > 2 5 > 4 >> 5 > 2)
                 E.add_constraint((val_is_greater(val2, val1) & val_is_greater(val3, val2)) >> val_is_greater(val3, val1))
     
-    # Initalizes card suits as Briscola suits or not. (also ensures that every card is unique)
+    # Initalizes card suits as Briscola suits or not.
     for card in CARDS:
-        # Constraint: There is exactly one of each card. (all cards are unique)
-        constraint.add_exactly_one(E, card)
         if CARDS[card]["suit"] == BRISCOLA_SUIT:
             # Constraint: If a card is apart of the suit that is the current Briscola suit, it is a Briscola (or trump) card in our game.
             E.add_constraint((card_is_brisc(card, BRISCOLA_SUIT)))
+        else:
+            # Constraint: Otherwise, the card is not apart of the current Briscola suit
+            E.add_constraint((~card_is_brisc(card, BRISCOLA_SUIT)))
+        
+        # Initalizes card suits as round suits or not (this code will need to be tweaked later for more dynamic round suits)
+        if CARDS[card]["suit"] == ROUND_SUIT:
+            # Constraint: If a card is apart of the suit that is the current round suit, it is a round suit card in our round.
+            E.add_constraint((card_is_suit_of_round(card, ROUND_SUIT)))
+        else:
+            # Constraint: Otherwise, the card is not apart of the current round suit
+            E.add_constraint((~card_is_suit_of_round(card, ROUND_SUIT)))
+    
 
     
     # Initalize all cards with the same suit (this method will automatically make cards suits symmetric as well)
@@ -162,18 +188,18 @@ def example_theory():
                 continue
             # Make all the propositions variables (this is just more consise, since this is a long constraint)
             is_b1 = card_is_brisc(card1, BRISCOLA_SUIT)
+            is_r1 = card_is_suit_of_round(card1, ROUND_SUIT)
             is_b2 = card_is_brisc(card2, BRISCOLA_SUIT)
+            is_r2 = card_is_suit_of_round(card2, ROUND_SUIT)
             same_suit = card_is_same_suit(card1, card2)
             val_greater = val_is_greater(CARDS[card1]["value"], CARDS[card2]["value"])
-            # Constraint: If card1 is brisc and, either card2 is not brsic or both are the same suit and card1 has a higher value, then card1 beats card2.
-            E.add_constraint(((is_b1 & ~same_suit) | (same_suit & val_greater)) >> card_beats_card(card1, card2))
+            
+            # Constraint: If either card1 and card2 are the same suit and val1 has a higher value, or if card1 is brisc anc card2 is not, or if card1 is round and card2 is not and card2 is not a brisc suit, .
+            E.add_constraint(((same_suit & val_greater) | (is_b1 & ~same_suit) | (is_r1 & ~is_b2 & ~same_suit)) >> card_beats_card(card1, card2))
             # Constraint: If a card1 beats card2, card2 does not beat card1.
             E.add_constraint(card_beats_card(card1, card2) >> ~card_beats_card(card2, card1))
-
-            # Constraint: If neither card1 nor card2 are brisc, and card1 and card2 are not the same suit, card1 does not beat card2 and card2 does not beat card1.
-            E.add_constraint((~is_b1 & ~is_b2 & ~same_suit) >> (~card_beats_card(card1, card2) & ~card_beats_card(card2, card1)))
-            # NOTE: THIS IS LIKELY TO BE A TEMPORARY CONSTRAINT, AS CARDS OF LEADING SUITS TAKE PRIORITY AND BEAT CARDS, EVEN IF THEY ARE DIFFERING SUITS.
-
+            # Constraint: If neither card1 nor card2 are brisc, neither are the round suit, and card1 and card2 are not the same suit, card1 does not beat card2 and card2 does not beat card1.
+            E.add_constraint((~is_b1 & ~is_b2 & ~is_r1 & ~is_r2 & ~same_suit) >> (~card_beats_card(card1, card2) & ~card_beats_card(card2, card1)))
     
     #TODO: Need to consider what happens if cards are of differing suits that aren't Briscola suit. Need to figure out how to say that they cannot beat eachother all the time.
 
