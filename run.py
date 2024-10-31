@@ -7,6 +7,7 @@ from bauhaus.utils import count_solutions, likelihood
 # These two lines make sure a faster SAT solver is used.
 from nnf import config
 config.sat_backend = "kissat"
+from utils import display_solution
 
 # Encoding that will store all of your constraints
 E = Encoding()
@@ -108,15 +109,16 @@ class player_wins_trick:
 #  This restriction is fairly minimal, and if there is any concern, reach out to the teaching staff to clarify
 #  what the expectations are.
 def example_theory():
-
-    #TODO: Address equal cases (What is Sword 2 = Coin 2 somehow)
-
-    # Initalizes the base cases for card values being greater than others 
-    value_propositions=[]
+    
+    # Code to intialize base cases for values being greater than other values 
     for i in range (0, len(CARD_VALUES) - 1):
-        # For every index except the final index, say the value at i+1 is greater than the value at i+1.
-        #value_propositions.append(val_is_greater(CARD_VALUES[i+1], CARD_VALUES[i]))
+        # Constraint: Base cases for values being greater than each other. 
         E.add_constraint(val_is_greater(CARD_VALUES[i+1], CARD_VALUES[i]))
+        # Constraint: Values cannot be greater than themselves.
+        E.add_constraint(~val_is_greater(CARD_VALUES[i], CARD_VALUES[i]))
+        # Constraint: If a val1 is greater than val2, val2 cannot be greater than val1
+        E.add_constraint(val_is_greater(CARD_VALUES[i+1], CARD_VALUES[i]) >> ~val_is_greater(CARD_VALUES[i], CARD_VALUES[i+1]))
+    
     
     # Code to ensure that values being greater follows transitive properties
     for val1 in CARD_VALUES:
@@ -126,41 +128,54 @@ def example_theory():
             for val3 in CARD_VALUES:
                 if val2 == val3 or val1 == val3:
                     continue
-                # Example: 4 > 2 5 > 4 >> 5 > 2
+                # Constraint: If val2 > val1 and val3 > val2, then val3 must be greater than val1. (Example: 4 > 2 5 > 4 >> 5 > 2)
                 E.add_constraint((val_is_greater(val2, val1) & val_is_greater(val3, val2)) >> val_is_greater(val3, val1))
     
-    for val in value_propositions:
-        print(val._prop_name())
+    # Initalizes card suits as Briscola suits or not. (also ensures that every card is unique)
+    for card in CARDS:
+        # Constraint: There is exactly one of each card. (all cards are unique)
+        constraint.add_exactly_one(E, card)
+        if CARDS[card]["suit"] == BRISCOLA_SUIT:
+            # Constraint: If a card is apart of the suit that is the current Briscola suit, it is a Briscola (or trump) card in our game.
+            E.add_constraint((card_is_brisc(card, BRISCOLA_SUIT)))
 
+    
     # Initalize all cards with the same suit (this method will automatically make cards suits symmetric as well)
-    same_suit_propositions=[]
     for card1 in CARDS:
+        # Constraint: Cards cannot be the same suit as themselves, as that wouldn't make sense as a solution
+        E.add_constraint(~card_is_same_suit(card1, card1))
         for card2 in CARDS:
             if card1 == card2:
                 continue
             if CARDS[card1]["suit"] == CARDS[card2]["suit"]:
-                #same_suit_propositions.append(card_is_same_suit(card1, card2))
+                # Constraint: If the suits of the cards match, they are the same suit.
                 E.add_constraint(card_is_same_suit(card1, card2))
+            else:
+                # Constraint: Otherwise, they are not the same suit.
+                E.add_constraint(~card_is_same_suit(card1, card2))
 
-    for val in same_suit_propositions:
-        print(val._prop_name())
-
-    # Initalizes card suits as Briscola suits or not. (also ensures that every card is unique)
-    for card in CARDS:
-        if CARDS[card]["suit"] == BRISCOLA_SUIT:
-            E.add_constraint((card_is_brisc(card, BRISCOLA_SUIT)))
-        constraint.add_exactly_one(E, card)
 
     # Intializes if a card beats a card or not.
     for card1 in CARDS:
         for card2 in CARDS:
+            if card1 == card2:
+                continue
             # Make all the propositions variables (this is just more consise, since this is a long constraint)
-            is_b = card_is_brisc(card1, BRISCOLA_SUIT)
+            is_b1 = card_is_brisc(card1, BRISCOLA_SUIT)
+            is_b2 = card_is_brisc(card2, BRISCOLA_SUIT)
             same_suit = card_is_same_suit(card1, card2)
             val_greater = val_is_greater(CARDS[card1]["value"], CARDS[card2]["value"])
-            # card1 beats card2 either if card1 is brisc and card2 is not, or if both are the same suit and card1 has a higher value.
-            E.add_constraint(((is_b & ~same_suit)| (same_suit & val_greater)) >> card_beats_card(card1, card2))
+            # Constraint: If card1 is brisc and, either card2 is not brsic or both are the same suit and card1 has a higher value, then card1 beats card2.
+            E.add_constraint(((is_b1 & ~same_suit) | (same_suit & val_greater)) >> card_beats_card(card1, card2))
+            # Constraint: If a card1 beats card2, card2 does not beat card1.
+            E.add_constraint(card_beats_card(card1, card2) >> ~card_beats_card(card2, card1))
+
+            # Constraint: If neither card1 nor card2 are brisc, and card1 and card2 are not the same suit, card1 does not beat card2 and card2 does not beat card1.
+            E.add_constraint((~is_b1 & ~is_b2 & ~same_suit) >> (~card_beats_card(card1, card2) & ~card_beats_card(card2, card1)))
+            # NOTE: THIS IS LIKELY TO BE A TEMPORARY CONSTRAINT, AS CARDS OF LEADING SUITS TAKE PRIORITY AND BEAT CARDS, EVEN IF THEY ARE DIFFERING SUITS.
+
     
+    #TODO: Need to consider what happens if cards are of differing suits that aren't Briscola suit. Need to figure out how to say that they cannot beat eachother all the time.
 
     #TODO: Add in code for player_wins_trick
 
@@ -193,8 +208,9 @@ if __name__ == "__main__":
     # of your model:
     print("\nSatisfiable: %s" % T.satisfiable())
     #print("# Solutions: %d" % count_solutions(T))
-    print("   Solution: %s" % T.solve())
-
+    #print("   Solution: %s" % T.solve())
+    S = T.solve()
+    display_solution(S)
     #print("\nVariable likelihoods:")
     #for v,vn in zip([a,b,c,x,y,z], 'abcxyz'):
         # Ensure that you only send these functions NNF formulas
