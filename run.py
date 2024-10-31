@@ -8,30 +8,37 @@ from bauhaus.utils import count_solutions, likelihood
 from nnf import config
 config.sat_backend = "kissat"
 from utils import display_solution
+from example import briscola_suit, round_suit, cards_in_play, card_to_win, player_to_win, check_suit
 
 # Encoding that will store all of your constraints
 E = Encoding()
 
 
-PLAYER_NUMBER={'P1':0,'P2':0,'P3':0,'P4':0}
+PLAYERS={'P1':0,'P2':0,'P3':0,'P4':0}
 
 TRICK_NUMBER=0
 
 # This is a fixed configuration of cards, for the sake of testing for now (CARDS would later feature every card in the deck, which will be created with a for loop)
-CARDS={"7 of Cups" : {"suit" : 'Cups', "value" : '7'}, 
-       "Horseman of Swords" : {"suit" : 'Swords', "value" : 'H'},
-       "Jack of Clubs" : {"suit" : 'Clubs', "value" : 'J'},
-        "3 of Coins" : {"suit" : 'Coins', "value" : '3'},
-        "3 of Cups" : {"suit" : 'Cups', "value" : '3'} }
 
-CARD_SUITS=['Swords', 'Cups', 'Clubs' 'Coins']
+CARD_SUITS=['Swords', 'Cups', 'Clubs', 'Coins']
 
 CARD_VALUES=['2','4','5','6','7','J','H','K','3','A']
 
+CARDS = {}
+
+for s in CARD_SUITS:
+    for v in CARD_VALUES:
+        key_card = v + " of " + s
+        CARDS[key_card] = {"suit" : s, "value" : v}
+
 # Values below are values that can be dynamically changed, via an example doc.
-BRISCOLA_SUIT='Swords'
-ROUND_SUIT='Cups'
-CARDS_IN_PLAY=["7 of Cups", "Horseman of Swords", "Jack of Clubs", "3 of Coins"]
+BRISCOLA_SUIT=briscola_suit
+ROUND_SUIT=round_suit
+# Card order is based off of order in the list.
+CARDS_IN_PLAY=cards_in_play
+
+CARD_TO_WIN=card_to_win
+PLAYER_TO_WIN=player_to_win
 
 #TODO: Create a for loop that will create the card deck sequentially
 
@@ -103,20 +110,53 @@ class card_beats_card:
 
     def _prop_name(self):
         return f"{self.card1} beats {self.card2}"
+
+# New proposition to say that a player wins a trick, given a round configuration and player.
+@proposition(E)
+class player_owns_card:
+
+    def __init__(self, card, player) -> None:
+        assert card in CARDS 
+        assert player in PLAYERS
+        self.card = card
+        self.player = player
+
+    def _prop_name(self):
+        return f"{self.player} owns the card {self.card}"
     
+
+# New proposition to say that a player wins a trick, given a round configuration and player.
+@proposition(E)
+class card_in_round:
+
+    def __init__(self, card, card_in_play) -> None:
+        #TODO: Add a for loop here to check each card in the array (for now I'm just asserting that the cards exist as a placeholder)
+        assert card in CARDS 
+        for i in card_in_play:
+            assert i in CARDS.keys()
+        self.card = card
+        self.card_in_play = card_in_play
+
+    def _prop_name(self):
+        return f"{self.card} is apart of the current round"
+
+
 # New proposition to say that a player wins a trick, given a round configuration and player.
 @proposition(E)
 class player_wins_trick:
 
-    def __init__(self, cards_in_play, player) -> None:
+    def __init__(self, cards_in_play, card, player) -> None:
         #TODO: Add a for loop here to check each card in the array (for now I'm just asserting that the cards exist as a placeholder)
-        assert cards_in_play in CARDS 
-        assert player in PLAYER_NUMBER
+        for i in cards_in_play:
+            assert i in CARDS.keys()
+        assert card in CARDS
+        assert player in PLAYERS
         self.cards_in_play = cards_in_play
+        self.card = card
         self.player = player
 
     def _prop_name(self):
-        return f"{self.player} wins the trick of configuration {self.cards_in_play}"
+        return f"{self.player} wins the trick of configuration {self.cards_in_play} with their card {self.card}"
 
 
 # Build an example full theory for your setting and return it.
@@ -125,7 +165,8 @@ class player_wins_trick:
 #  This restriction is fairly minimal, and if there is any concern, reach out to the teaching staff to clarify
 #  what the expectations are.
 def example_theory():
-    
+
+
     # Code to intialize base cases for values being greater than other values 
     for i in range (0, len(CARD_VALUES) - 1):
         # Constraint: Base cases for values being greater than each other. 
@@ -134,7 +175,6 @@ def example_theory():
         E.add_constraint(~val_is_greater(CARD_VALUES[i], CARD_VALUES[i]))
         # Constraint: If a val1 is greater than val2, val2 cannot be greater than val1
         E.add_constraint(val_is_greater(CARD_VALUES[i+1], CARD_VALUES[i]) >> ~val_is_greater(CARD_VALUES[i], CARD_VALUES[i+1]))
-    
     
     # Code to ensure that values being greater follows transitive properties
     for val1 in CARD_VALUES:
@@ -146,7 +186,7 @@ def example_theory():
                     continue
                 # Constraint: If val2 > val1 and val3 > val2, then val3 must be greater than val1. (Example: 4 > 2 5 > 4 >> 5 > 2)
                 E.add_constraint((val_is_greater(val2, val1) & val_is_greater(val3, val2)) >> val_is_greater(val3, val1))
-    
+
     # Initalizes card suits as Briscola suits or not.
     for card in CARDS:
         if CARDS[card]["suit"] == BRISCOLA_SUIT:
@@ -156,7 +196,7 @@ def example_theory():
             # Constraint: Otherwise, the card is not apart of the current Briscola suit
             E.add_constraint((~card_is_brisc(card, BRISCOLA_SUIT)))
         
-        # Initalizes card suits as round suits or not (this code will need to be tweaked later for more dynamic round suits)
+        # Initalizes card suits as round suits or not (this code may need to be tweaked later for more dynamic round suits)
         if CARDS[card]["suit"] == ROUND_SUIT:
             # Constraint: If a card is apart of the suit that is the current round suit, it is a round suit card in our round.
             E.add_constraint((card_is_suit_of_round(card, ROUND_SUIT)))
@@ -165,7 +205,7 @@ def example_theory():
             E.add_constraint((~card_is_suit_of_round(card, ROUND_SUIT)))
     
 
-    
+
     # Initalize all cards with the same suit (this method will automatically make cards suits symmetric as well)
     for card1 in CARDS:
         # Constraint: Cards cannot be the same suit as themselves, as that wouldn't make sense as a solution
@@ -200,12 +240,49 @@ def example_theory():
             E.add_constraint(card_beats_card(card1, card2) >> ~card_beats_card(card2, card1))
             # Constraint: If neither card1 nor card2 are brisc, neither are the round suit, and card1 and card2 are not the same suit, card1 does not beat card2 and card2 does not beat card1.
             E.add_constraint((~is_b1 & ~is_b2 & ~is_r1 & ~is_r2 & ~same_suit) >> (~card_beats_card(card1, card2) & ~card_beats_card(card2, card1)))
-    
+
     #TODO: Need to consider what happens if cards are of differing suits that aren't Briscola suit. Need to figure out how to say that they cannot beat eachother all the time.
+    
+    # Set players to own cards and set what cards are in the round
+    card_i = 0
+    for player1 in PLAYERS.keys():
+        E.add_constraint(player_owns_card(CARDS_IN_PLAY[card_i], player1))
+        E.add_constraint(player_owns_card(CARDS_IN_PLAY[card_i], player1) >> card_in_round(CARDS_IN_PLAY[card_i], CARDS_IN_PLAY))
+        for player2 in PLAYERS.keys():
+            if player1 == player2:
+                continue
+            E.add_constraint(player_owns_card(CARDS_IN_PLAY[card_i], player1) >> ~player_owns_card(CARDS_IN_PLAY[card_i], player2))
+        card_i += 1
+
+    #TODO: Create constraints to say if a player should win a given round or not.
+    card_win_prop=[]
+    for player in PLAYERS:
+        #print(player)
+        for card in CARDS_IN_PLAY:
+            #print(card)
+            if card == CARD_TO_WIN:
+                continue
+            card_win_prop.append(card_beats_card(CARD_TO_WIN, card))
+            #print(card_win_prop)
+        E.add_constraint((And(card_win_prop) & player_owns_card(CARD_TO_WIN, player)) >> player_wins_trick(CARDS_IN_PLAY, CARD_TO_WIN, player))
+    
+
 
     #TODO: Add in code for player_wins_trick
+    """
+    Brainstorming for player_wins_trick:
+    - What we want is for a player to play some card, and for it to beat every other card in the round.
+    - Likely, we need a new proposition detailing who 'owns' a card.
+    - General Structure: Pass in an array of cards, a specific card, and a player
+        If specific card in the array cards (checked in proposition)
+        If specific card1 beats card2, card3 and card4, AND specific card is owned by player, then player wins.
+
+    """
+
 
     
+    
+
 
 
     print(E.constraints)
@@ -236,7 +313,19 @@ if __name__ == "__main__":
     #print("# Solutions: %d" % count_solutions(T))
     #print("   Solution: %s" % T.solve())
     S = T.solve()
-    display_solution(S)
+    
+    for k in S:
+        if ((check_suit + ' beats') in k._prop_name()):
+            if S[k]:
+                print(k)
+    """
+    for k in S:
+        if ('wins' in k._prop_name() or 'owns' in k._prop_name()):
+            if S[k]:
+                print(k)
+    """
+    #display_solution(S)
+    
     #print("\nVariable likelihoods:")
     #for v,vn in zip([a,b,c,x,y,z], 'abcxyz'):
         # Ensure that you only send these functions NNF formulas
