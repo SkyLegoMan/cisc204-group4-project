@@ -16,7 +16,10 @@ check_suit='Swords' # Change this suit to see which suit will beat what kind of 
 # Below are values that cannot change results yet (these are works in progress).
 
 # Card order is based off of order in the list.
-cards_in_play=["7 of Cups", "H of Swords", "J of Clubs", "3 of Coins"]
+#cards_in_play=["H of Swords", "7 of Cups", "J of Clubs", "3 of Coins"]
+#cards_in_play=["3 of Clubs", "A of Cups", "A of Clubs", "5 of Cups"]
+#cards_in_play=["2 of Coins", "3 of Swords", "A of Swords", "6 of Cups"]
+cards_in_play=["3 of Coins", "K of Coins", "A of Clubs", "2 of Cups"]
 
-card_to_win="7 of Cups"
-player_to_win="P2"
+#card_to_win="H of Swords"
+#player_to_win="P2"
