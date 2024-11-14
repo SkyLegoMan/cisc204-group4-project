@@ -1,6 +1,5 @@
 import pprint
 
-
 from bauhaus import Encoding, proposition, constraint, And, Or
 from bauhaus.utils import count_solutions, likelihood
 
@@ -8,7 +7,7 @@ from bauhaus.utils import count_solutions, likelihood
 from nnf import config
 config.sat_backend = "kissat"
 from utils import display_solution
-from example import briscola_suit, round_suit, cards_in_play, card_to_win, player_to_win, check_suit
+from example import briscola_suit, round_suit, cards_in_play
 
 # Encoding that will store all of your constraints
 E = Encoding()
@@ -37,8 +36,8 @@ ROUND_SUIT=round_suit
 # Card order is based off of order in the list.
 CARDS_IN_PLAY=cards_in_play
 
-CARD_TO_WIN=card_to_win
-PLAYER_TO_WIN=player_to_win
+#CARD_TO_WIN=card_to_win
+#PLAYER_TO_WIN=player_to_win
 
 #TODO: Create a for loop that will create the card deck sequentially
 
@@ -111,7 +110,7 @@ class card_beats_card:
     def _prop_name(self):
         return f"{self.card1} beats {self.card2}"
 
-# New proposition to say that a player wins a trick, given a round configuration and player.
+# New proposition to say that a player owns a particular card.
 @proposition(E)
 class player_owns_card:
 
@@ -125,7 +124,7 @@ class player_owns_card:
         return f"{self.player} owns the card {self.card}"
     
 
-# New proposition to say that a player wins a trick, given a round configuration and player.
+# New proposition to say that a card is apart of a round
 @proposition(E)
 class card_in_round:
 
@@ -139,6 +138,17 @@ class card_in_round:
 
     def _prop_name(self):
         return f"{self.card} is apart of the current round"
+    
+# New proposition to say that a trick has ended
+@proposition(E)
+class trick_ended:
+
+    def __init__(self, trick_num) -> None:
+        #TODO: Add a for loop here to check each card in the array (for now I'm just asserting that the cards exist as a placeholder)
+        self.trick_num = trick_num
+
+    def _prop_name(self):
+        return f"Trick #{self.trick_num} has ended"
 
 
 # New proposition to say that a player wins a trick, given a round configuration and player.
@@ -196,6 +206,7 @@ def example_theory():
             # Constraint: Otherwise, the card is not apart of the current Briscola suit
             E.add_constraint((~card_is_brisc(card, BRISCOLA_SUIT)))
         
+        #TODO: Make the round suits dynamic
         # Initalizes card suits as round suits or not (this code may need to be tweaked later for more dynamic round suits)
         if CARDS[card]["suit"] == ROUND_SUIT:
             # Constraint: If a card is apart of the suit that is the current round suit, it is a round suit card in our round.
@@ -241,9 +252,9 @@ def example_theory():
             # Constraint: If neither card1 nor card2 are brisc, neither are the round suit, and card1 and card2 are not the same suit, card1 does not beat card2 and card2 does not beat card1.
             E.add_constraint((~is_b1 & ~is_b2 & ~is_r1 & ~is_r2 & ~same_suit) >> (~card_beats_card(card1, card2) & ~card_beats_card(card2, card1)))
 
-    #TODO: Need to consider what happens if cards are of differing suits that aren't Briscola suit. Need to figure out how to say that they cannot beat eachother all the time.
     
     # Set players to own cards and set what cards are in the round
+    
     card_i = 0
     for player1 in PLAYERS.keys():
         E.add_constraint(player_owns_card(CARDS_IN_PLAY[card_i], player1))
@@ -251,53 +262,25 @@ def example_theory():
         for player2 in PLAYERS.keys():
             if player1 == player2:
                 continue
-            E.add_constraint(player_owns_card(CARDS_IN_PLAY[card_i], player1) >> ~player_owns_card(CARDS_IN_PLAY[card_i], player2))
+            E.add_constraint(~player_owns_card(CARDS_IN_PLAY[card_i], player2))
         card_i += 1
 
     #TODO: Create constraints to say if a player should win a given round or not.
     card_win_prop=[]
-    for player in PLAYERS:
-        #print(player)
-        for card in CARDS_IN_PLAY:
-            #print(card)
-            if card == CARD_TO_WIN:
+    for card1 in CARDS_IN_PLAY:
+        for card2 in CARDS_IN_PLAY:
+            if card1 == card2:
                 continue
-            card_win_prop.append(card_beats_card(CARD_TO_WIN, card))
-            #print(card_win_prop)
-        E.add_constraint((And(card_win_prop) & player_owns_card(CARD_TO_WIN, player)) >> player_wins_trick(CARDS_IN_PLAY, CARD_TO_WIN, player))
-    
-
-
-    #TODO: Add in code for player_wins_trick
-    """
-    Brainstorming for player_wins_trick:
-    - What we want is for a player to play some card, and for it to beat every other card in the round.
-    - Likely, we need a new proposition detailing who 'owns' a card.
-    - General Structure: Pass in an array of cards, a specific card, and a player
-        If specific card in the array cards (checked in proposition)
-        If specific card1 beats card2, card3 and card4, AND specific card is owned by player, then player wins.
-
-    """
-
-
-    
-    
-
-
+            card_win_prop.append(card_beats_card(card1, card2))
+        for player in PLAYERS:
+            E.add_constraint((~player_owns_card(card1, player)) >> ~player_wins_trick(CARDS_IN_PLAY, card1, player))
+            E.add_constraint((And(card_win_prop) & player_owns_card(card1, player)) >> player_wins_trick(CARDS_IN_PLAY, card1, player))
+            E.add_constraint((~And(card_win_prop) & player_owns_card(card1, player)) >> ~player_wins_trick(CARDS_IN_PLAY, card1, player))
+        # Reset card propositions for each player
+        card_win_prop=[]
+            
 
     print(E.constraints)
-    
-
-
-    # Add custom constraints by creating formulas with the variables you created. 
-    #E.add_constraint((a | b) & ~x)
-    # Implication
-    #E.add_constraint(y >> z)
-    ## Negate a formula
-    #E.add_constraint(~(x & y))
-    # You can also add more customized "fancy" constraints. Use case: you don't want to enforce "exactly one"
-    # for every instance of BasicPropositions, but you want to enforce it for a, b, and c.:
-    #constraint.add_exactly_one(E, a, b, c)
 
     return E
 
@@ -315,15 +298,10 @@ if __name__ == "__main__":
     S = T.solve()
     
     for k in S:
-        if ((check_suit + ' beats') in k._prop_name()):
+        if ('wins' in k._prop_name()):
             if S[k]:
                 print(k)
-    """
-    for k in S:
-        if ('wins' in k._prop_name() or 'owns' in k._prop_name()):
-            if S[k]:
-                print(k)
-    """
+    
     #display_solution(S)
     
     #print("\nVariable likelihoods:")
