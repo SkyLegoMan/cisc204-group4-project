@@ -1,4 +1,5 @@
 import pprint
+import random
 
 from bauhaus import Encoding, proposition, constraint, And, Or
 from bauhaus.utils import count_solutions, likelihood
@@ -7,7 +8,7 @@ from bauhaus.utils import count_solutions, likelihood
 from nnf import config
 config.sat_backend = "kissat"
 from utils import display_solution
-from example import briscola_suit, round_suit, cards_in_play
+from example import briscola_suit, round_suit, cards_in_play, starting_hands
 
 # Encoding that will store all of your constraints
 E = Encoding()
@@ -24,11 +25,21 @@ CARD_SUITS=['Swords', 'Cups', 'Clubs', 'Coins']
 CARD_VALUES=['2','4','5','6','7','J','H','K','3','A']
 
 CARDS = {}
+CARD_DECK = []
 
+# Initialize valid cards, and a new randomized card deck
 for s in CARD_SUITS:
     for v in CARD_VALUES:
         key_card = v + " of " + s
         CARDS[key_card] = {"suit" : s, "value" : v}
+        CARD_DECK.append(key_card)
+
+random.shuffle(CARD_DECK)
+
+# Remove all starting hand cards from the deck
+for hands in starting_hands:
+    for card in hands:
+        CARD_DECK.remove(card)
 
 # Values below are values that can be dynamically changed, via an example doc.
 BRISCOLA_SUIT=briscola_suit
@@ -112,16 +123,17 @@ class card_beats_card:
 
 # New proposition to say that a player owns a particular card.
 @proposition(E)
-class player_owns_card:
+class player_has_card:
 
-    def __init__(self, card, player) -> None:
+    def __init__(self, card, player, trick_num) -> None:
         assert card in CARDS 
         assert player in PLAYERS
         self.card = card
         self.player = player
+        self.trick_num = trick_num
 
     def _prop_name(self):
-        return f"{self.player} owns the card {self.card}"
+        return f"{self.player} has the card {self.card} on trick number {self.trick_num}"
     
 
 # New proposition to say that a card is apart of a round
@@ -155,7 +167,7 @@ class trick_ended:
 @proposition(E)
 class player_wins_trick:
 
-    def __init__(self, cards_in_play, card, player) -> None:
+    def __init__(self, cards_in_play, card, player, trick_num) -> None:
         #TODO: Add a for loop here to check each card in the array (for now I'm just asserting that the cards exist as a placeholder)
         for i in cards_in_play:
             assert i in CARDS.keys()
@@ -164,9 +176,54 @@ class player_wins_trick:
         self.cards_in_play = cards_in_play
         self.card = card
         self.player = player
+        self.trick_num = trick_num
 
     def _prop_name(self):
-        return f"{self.player} wins the trick of configuration {self.cards_in_play} with their card {self.card}"
+        return f"{self.player} wins the trick number {self.trick_num} of configuration {self.cards_in_play} with their card {self.card}"
+    
+    # New proposition to say that a player plays a particular card on a particular trick
+@proposition(E)
+class player_plays_card:
+
+    def __init__(self, card, player, trick_num) -> None:
+        assert card in CARDS 
+        assert player in PLAYERS
+        self.card = card
+        self.player = player
+        self.trick_num = trick_num
+
+    def _prop_name(self):
+        return f"{self.player} plays the card {self.card} on trick number {self.trick_num}"
+
+
+# Function that checks if a player wins a certain trick or not.
+def check_trick():
+
+    # Determines if a player plays a card to win a trick or not.
+    card_win_prop=[]
+    for card1 in CARDS_IN_PLAY:
+        for card2 in CARDS_IN_PLAY:
+            if card1 == card2:
+                continue
+            card_win_prop.append(card_beats_card(card1, card2))
+        for player in PLAYERS:
+            # NOTE: I had to seperate these constraints to get them to work properly
+            # Constaint: If a player doesn't have a card, they can't win the trick with that card
+            E.add_constraint((~player_has_card(card1, player, TRICK_NUMBER)) >> ~player_wins_trick(CARDS_IN_PLAY, card1, player, TRICK_NUMBER))
+            # Constaint: If a player doesn't have a card, they can't play that card
+            E.add_constraint((~player_has_card(card1, player, TRICK_NUMBER)) >> ~player_plays_card(card1, player, TRICK_NUMBER))
+            # Constraint: If a player has a card but the card doesn't beat every other card, they don't win the trick that card
+            E.add_constraint((~And(card_win_prop) & player_has_card(card1, player, TRICK_NUMBER)) >> ~player_wins_trick(CARDS_IN_PLAY, card1, player, TRICK_NUMBER))
+            # Constraint: If a player has a card, it beats other card, and they play the card, they win the trick with that card.
+            E.add_constraint((And(card_win_prop) & player_has_card(card1, player, TRICK_NUMBER) & player_plays_card(card1, player, TRICK_NUMBER)) 
+                             >> player_wins_trick(CARDS_IN_PLAY, card1, player, TRICK_NUMBER))
+            
+            # THIS CONSTRAINT IS TEMPORARY
+            #E.add_constraint(~player_wins_trick(CARDS_IN_PLAY, card1, player, TRICK_NUMBER) >> ~player_plays_card(card1, player, TRICK_NUMBER))
+
+        # Reset card propositions for each player
+        card_win_prop=[]
+
 
 
 # Build an example full theory for your setting and return it.
@@ -252,33 +309,20 @@ def example_theory():
             # Constraint: If neither card1 nor card2 are brisc, neither are the round suit, and card1 and card2 are not the same suit, card1 does not beat card2 and card2 does not beat card1.
             E.add_constraint((~is_b1 & ~is_b2 & ~is_r1 & ~is_r2 & ~same_suit) >> (~card_beats_card(card1, card2) & ~card_beats_card(card2, card1)))
 
+        # Initialize player ownership over starting cards
+        card_i = 0
+        has_card_prop=[]
+        for player1 in PLAYERS.keys():
+            # Constraint: Each player has the card that they have in their hand
+            E.add_constraint(player_has_card(CARDS_IN_PLAY[card_i], player1, TRICK_NUMBER))
+            for player2 in PLAYERS.keys():
+                if player1 == player2:
+                    continue
+                # Constraint: A second player does not have a card another player already has in their hand
+                E.add_constraint(~player_has_card(CARDS_IN_PLAY[card_i], player2, TRICK_NUMBER))
+            card_i += 1
     
-    # Set players to own cards and set what cards are in the round
-    
-    card_i = 0
-    for player1 in PLAYERS.keys():
-        E.add_constraint(player_owns_card(CARDS_IN_PLAY[card_i], player1))
-        E.add_constraint(player_owns_card(CARDS_IN_PLAY[card_i], player1) >> card_in_round(CARDS_IN_PLAY[card_i], CARDS_IN_PLAY))
-        for player2 in PLAYERS.keys():
-            if player1 == player2:
-                continue
-            E.add_constraint(~player_owns_card(CARDS_IN_PLAY[card_i], player2))
-        card_i += 1
-
-    #TODO: Create constraints to say if a player should win a given round or not.
-    card_win_prop=[]
-    for card1 in CARDS_IN_PLAY:
-        for card2 in CARDS_IN_PLAY:
-            if card1 == card2:
-                continue
-            card_win_prop.append(card_beats_card(card1, card2))
-        for player in PLAYERS:
-            E.add_constraint((~player_owns_card(card1, player)) >> ~player_wins_trick(CARDS_IN_PLAY, card1, player))
-            E.add_constraint((And(card_win_prop) & player_owns_card(card1, player)) >> player_wins_trick(CARDS_IN_PLAY, card1, player))
-            E.add_constraint((~And(card_win_prop) & player_owns_card(card1, player)) >> ~player_wins_trick(CARDS_IN_PLAY, card1, player))
-        # Reset card propositions for each player
-        card_win_prop=[]
-            
+        check_trick()
 
     print(E.constraints)
 
@@ -286,7 +330,8 @@ def example_theory():
 
 
 if __name__ == "__main__":
-
+    print(len(CARD_DECK))
+    print(CARD_DECK)
     T = example_theory()
     # Don't compile until you're finished adding all your constraints!
     T = T.compile()
@@ -298,7 +343,7 @@ if __name__ == "__main__":
     S = T.solve()
     
     for k in S:
-        if ('wins' in k._prop_name()):
+        if (('wins' in k._prop_name()) or ('plays' in k._prop_name())):
             if S[k]:
                 print(k)
     

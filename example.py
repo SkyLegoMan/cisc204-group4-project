@@ -11,6 +11,12 @@ check_suit='Swords' # Change this suit to see which suit will beat what kind of 
 # To run the code, use python3 run.py in a terminal, after changing the values in this file.
 
 
+starting_hands=[["A of Cups", "7 of Cups", "2 of Swords"],
+                ["A of Coins","H of Swords","4 of Clubs"],
+                ["A of Swords","J of Clubs","K of Coins"],
+                ["A of Clubs","3 of Coins","5 of Cups"]]
+
+
 
 
 # Below are values that cannot change results yet (these are works in progress).
