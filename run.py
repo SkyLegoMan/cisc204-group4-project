@@ -7,7 +7,7 @@ from bauhaus.utils import count_solutions, likelihood
 # These two lines make sure a faster SAT solver is used.
 from nnf import config
 config.sat_backend = "kissat"
-from example import briscola_suit, cards_in_play, starting_hands
+from example import briscola_suit, starting_hands
 
 # Encoding that will store all of your constraints
 E = Encoding()
@@ -150,7 +150,6 @@ class player_wins_trick:
         #TODO: Add a for loop here to check each card in the array (for now I'm just asserting that the cards exist as a placeholder)
         assert card in CARDS
         assert player in PLAYERS
-        self.cards_in_play = cards_in_play
         self.card = card
         self.player = player
         self.trick_num = trick_num
@@ -213,23 +212,6 @@ class player_draws_card:
         return f"{self.player} draws the card '{self.card}' on trick #{self.trick_num}"
 
 
-    # While debuging the program to try and see which card wins with what cards, I noticed that round suits didn't seem to be winning when they should have been.
-    # So this test function was to pass in a a card set to see what will happen if I pass in no Briscola suits and only potnetial round suits.
-def test_round_suits():
-    test_hand1 = [["A of Cups", "7 of Cups", "2 of Coins"],
-                    ["A of Coins","H of Cups","4 of Clubs"],
-                    ["3 of Cups","J of Clubs","K of Coins"],
-                    ["A of Clubs","3 of Coins","5 of Cups"]]
-    test_hand2 = [["A of Cups"],
-                    ["4 of Clubs"],
-                    ["J of Clubs"],
-                    ["5 of Cups"]]
-    test_hand3 = [["2 of Coins"],
-                    ["4 of Clubs"],
-                    ["J of Clubs"],
-                    ["A of Clubs"]]
-    return test_hand1
-
 # This test theory was a function used to attempt to see some more aspects present in the propositions the model was choosing.
 def test_theory1():
     T = example_theory()
@@ -237,6 +219,7 @@ def test_theory1():
     print("\nSatisfiable: %s" % T.satisfiable())
 
     S = T.solve()
+    # Note: for loop print statements are separated to group together certain propositions, since the ordering of propositions in the solved model is random.
     for k in S:
         if (('round' in k._prop_name())):
             if S[k]:
@@ -285,6 +268,7 @@ def test_theory3():
     print("\nSatisfiable: %s" % T.satisfiable())
 
     S = T.solve()
+    # Note: for loop print statements are separated to group together certain propositions, since the ordering of propositions in the solved model is random.
     for i in range(2):
         for k in S:
             if (('starting card' in k._prop_name() and (f'#{i+1}' in k._prop_name()))):
@@ -337,6 +321,23 @@ def test_theory3():
                     print(k)
         print("\n")
 
+    # While debuging the program to try and see which card wins with what cards, I noticed that round suits didn't seem to be winning when they should have been.
+    # So this test function was to pass in a a card set to see what will happen if I pass in no Briscola suits and only potnetial round suits.
+def test_round_suits():
+    test_hand1 = [["A of Cups", "7 of Cups", "2 of Coins"],
+                    ["A of Coins","H of Cups","4 of Clubs"],
+                    ["3 of Cups","J of Clubs","K of Coins"],
+                    ["A of Clubs","3 of Coins","5 of Cups"]]
+    test_hand2 = [["A of Cups"],
+                    ["4 of Clubs"],
+                    ["J of Clubs"],
+                    ["5 of Cups"]]
+    test_hand3 = [["2 of Coins"],
+                    ["4 of Clubs"],
+                    ["J of Clubs"],
+                    ["A of Clubs"]]
+    return test_hand1
+
 # Test case with a smaller pre-defined deck to be able to track what cards are drawn/played.
 def test_card_beats_card():
     sample_deck = ['A of Cups', '7 of Cups', '2 of Swords', 'A of Coins','H of Swords',
@@ -344,88 +345,17 @@ def test_card_beats_card():
             '7 of Clubs', '4 of Coins', 'H of Clubs', '5 of Coins', 'K of Clubs', 'H of Coins', 'J of Coins', 'K of Swords']
     return sample_deck
     
-    
-# Function for updating the round suits after each round.
-def update_round_suit(trick_num):
-    start_card_prop=[]
-    for prop in HAS_CARD_PROP:
-        start_card = starting_player_card(prop.player, prop.card, trick_num)
-        start_card_prop.append(start_card)
-        # Constraint: If a player is not the starting player, this implies they cannot have a start card.
-        E.add_constraint(~starting_player(prop.player, trick_num) >> ~start_card)
-        # Constraint: If card is a starting card, that implies that the card was played.
-        E.add_constraint(start_card >> player_plays_card(prop.card, prop.player, trick_num))
-        # Constraint: A starting card implies its suit is the round suit of the trick
-        E.add_constraint((start_card >> suit_of_round(CARDS[prop.card]["suit"], trick_num)))
 
-    # Constraint: There is only ever one start card of each trick
-    constraint.add_exactly_one(E, start_card_prop)
-
-    suit_prop=[]
-    for suit in CARD_SUITS:
-        suit_prop.append(suit_of_round(suit, trick_num))
-    # Constraint: There is only ever one round suit of each trick
-    constraint.add_exactly_one(E, suit_prop)
-
-    for card1 in CARDS:
-        # Constraint: If the suit of a round is a card's suit, then the card is apart of the suit of the round
-        E.add_constraint(suit_of_round(CARDS[card1]["suit"], trick_num) >> (card_is_suit_of_round(card1, CARDS[card1]["suit"], trick_num)))
-        # Constraint: If the suit of a round is a not a card's suit, then the card is not apart of the suit of the round
-        E.add_constraint(~suit_of_round(CARDS[card1]["suit"], trick_num) >> (~card_is_suit_of_round(card1, CARDS[card1]["suit"], trick_num)))
-
-        for card2 in CARDS:
-            if card1 == card2:
-                continue
-            # Make all the propositions variables (this is just more consise, since this is a long constraint)
-            is_b1 = card_is_brisc(card1, BRISCOLA_SUIT)
-            is_r1 = card_is_suit_of_round(card1, CARDS[card1]["suit"], trick_num)
-            is_b2 = card_is_brisc(card2, BRISCOLA_SUIT)
-            is_r2 = card_is_suit_of_round(card2, CARDS[card2]["suit"], trick_num)
-            same_suit = card_is_same_suit(card1, card2)
-            val_greater = val_is_greater(CARDS[card1]["value"], CARDS[card2]["value"])
-
-            # If either card1 and card2 are the same suit and val1 has a higher value, or if card1 is brisc anc card2 is not, 
-            # or if card1 is round and card2 is not and card2 is not a brisc suit, then this statement is true.
-            statement = ((same_suit & val_greater) | (is_b1 & ~same_suit) | (is_r1 & ~is_b2 & ~same_suit))
-            # Constraint: card1 beats card2 if and only if the statement above is true.
-            E.add_constraint(statement >> card_beats_card(card1, card2, trick_num) & (card_beats_card(card1, card2, trick_num) >> statement))
-
-
-# Function that checks if a player wins a certain trick or not.
-def check_trick(trick_num):
-    # Determines if a player plays a card to win a trick or not.
-    card_win_prop=[]
-    for prop1 in PLAYS_CARD_PROP:
-        card1 = prop1.card
-        for prop2 in PLAYS_CARD_PROP:
-            card2 = prop2.card
-            if card1 == card2:
-                continue
-            card_win_prop.append((player_plays_card(card1, prop1.player, trick_num) & player_plays_card(card2, prop2.player, trick_num)) >> card_beats_card(card1, card2, trick_num))
-        for player in PLAYERS.keys():
-            # NOTE: I had to seperate these constraints to get them to work properly
-            # Constaint: If a player doesn't have a card, they can't win the trick with that card
-            E.add_constraint((~player_plays_card(card1, player, trick_num)) >> ~player_wins_trick(card1, player, trick_num))
-            # Constaint: If a player doesn't have a card, they can't play that card
-            E.add_constraint((~player_has_card(card1, player, trick_num)) >> ~player_plays_card(card1, player, trick_num))
-            # Constraint: If a player has a card but the card doesn't beat every other card, they don't win the trick that card
-            E.add_constraint((~And(card_win_prop) & player_plays_card(card1, player, trick_num)) >> ~player_wins_trick(card1, player, trick_num))
-            # Constraint: If a player has a card, it beats other card, and they play the card, they win the trick with that card and become the starting player in the next trick
-            E.add_constraint((And(card_win_prop) & player_plays_card(card1, player, trick_num)) >> (player_wins_trick(card1, player, trick_num)))
-            # Constraint: If a player wins a trick, they become the starting player in the next trick.
-            E.add_constraint(player_wins_trick(card1, player, trick_num) >> starting_player(player, (trick_num + 1)))
-
-        # Reset card propositions for each player
-        card_win_prop=[]
-
-
-# Example theory function that ties in the 2 previous functions.
+# Example theory that defines the model's theory for a single trick. 
+# Requires a specified trick number, a list of player hands, and a starting player proposition.
 def example_theory(trick_number, hands, start_player):
-    # Say that the first starting player is the first starting player
+
+    # Constraint: Say that the first starting player is the first starting player
     E.add_constraint(start_player)
     for player in PLAYERS.keys():
         if player == start_player.player:
             continue
+        # Constraint: If a player is not the same as the starting player, they cannot be the starting player of the current trick
         E.add_constraint(~starting_player(player, trick_number))
     
     # Initialize player ownership over starting cards
@@ -463,7 +393,7 @@ def example_theory(trick_number, hands, start_player):
                 # Constraint: If val2 > val1 and val3 > val2, then val3 must be greater than val1. (Example: 4 > 2 5 > 4 >> 5 > 2)
                 E.add_constraint((val_is_greater(val2, val1) & val_is_greater(val3, val2)) >> val_is_greater(val3, val1))
 
-    # Initalizes card suits as Briscola suits or not.
+    # Initalizes card suits as Briscola suits or not. (Briscola cards are static throughout the entire game)
     for card in CARDS:
         if CARDS[card]["suit"] == BRISCOLA_SUIT:
             # Constraint: If a card is apart of the suit that is the current Briscola suit, it is a Briscola (or trump) card in our game.
@@ -514,7 +444,48 @@ def example_theory(trick_number, hands, start_player):
     constraint.add_exactly_one(E, p4_card_prop)
 
     # Intializes if a card beats a card or not.
-    update_round_suit(trick_number)
+    start_card_prop=[]
+    for prop in HAS_CARD_PROP:
+        start_card = starting_player_card(prop.player, prop.card, trick_number)
+        start_card_prop.append(start_card)
+        # Constraint: If a player is not the starting player, this implies they cannot have a start card.
+        E.add_constraint(~starting_player(prop.player, trick_number) >> ~start_card)
+        # Constraint: If card is a starting card, that implies that the card was played.
+        E.add_constraint(start_card >> player_plays_card(prop.card, prop.player, trick_number))
+        # Constraint: A starting card implies its suit is the round suit of the trick
+        E.add_constraint((start_card >> suit_of_round(CARDS[prop.card]["suit"], trick_number)))
+
+    # Constraint: There is only ever one start card of each trick
+    constraint.add_exactly_one(E, start_card_prop)
+
+    suit_prop=[]
+    for suit in CARD_SUITS:
+        suit_prop.append(suit_of_round(suit, trick_number))
+    # Constraint: There is only ever one round suit of each trick
+    constraint.add_exactly_one(E, suit_prop)
+
+    for card1 in CARDS:
+        # Constraint: If the suit of a round is a card's suit, then the card is apart of the suit of the round
+        E.add_constraint(suit_of_round(CARDS[card1]["suit"], trick_number) >> (card_is_suit_of_round(card1, CARDS[card1]["suit"], trick_number)))
+        # Constraint: If the suit of a round is a not a card's suit, then the card is not apart of the suit of the round
+        E.add_constraint(~suit_of_round(CARDS[card1]["suit"], trick_number) >> (~card_is_suit_of_round(card1, CARDS[card1]["suit"], trick_number)))
+
+        for card2 in CARDS:
+            if card1 == card2:
+                continue
+            # Make all the propositions variables (this is just more consise, since this is a long constraint)
+            is_b1 = card_is_brisc(card1, BRISCOLA_SUIT)
+            is_r1 = card_is_suit_of_round(card1, CARDS[card1]["suit"], trick_number)
+            is_b2 = card_is_brisc(card2, BRISCOLA_SUIT)
+            is_r2 = card_is_suit_of_round(card2, CARDS[card2]["suit"], trick_number)
+            same_suit = card_is_same_suit(card1, card2)
+            val_greater = val_is_greater(CARDS[card1]["value"], CARDS[card2]["value"])
+
+            # If either card1 and card2 are the same suit and val1 has a higher value, or if card1 is brisc anc card2 is not, 
+            # or if card1 is round and card2 is not and card2 is not a brisc suit, then this statement is true.
+            statement = ((same_suit & val_greater) | (is_b1 & ~same_suit) | (is_r1 & ~is_b2 & ~same_suit))
+            # Constraint: card1 beats card2 if and only if the statement above is true.
+            E.add_constraint(statement >> card_beats_card(card1, card2, trick_number) & (card_beats_card(card1, card2, trick_number) >> statement))
         
     if (trick_number == 1):
         # Remove all starting hand cards from the deck (only on the starting trick)
@@ -523,8 +494,32 @@ def example_theory(trick_number, hands, start_player):
                 CARD_DECK.remove(card)
         
     # Check to see who won the trick
-    check_trick(trick_number)
+    card_win_prop=[]
+    for prop1 in PLAYS_CARD_PROP:
+        card1 = prop1.card
+        for prop2 in PLAYS_CARD_PROP:
+            card2 = prop2.card
+            if card1 == card2:
+                continue
+            card_win_prop.append((player_plays_card(card1, prop1.player, trick_number) & player_plays_card(card2, prop2.player, trick_number)) >> card_beats_card(card1, card2, trick_number))
+        for player in PLAYERS.keys():
+            # NOTE: I had to seperate these constraints to get them to work properly
+            # Constaint: If a player doesn't have a card, they can't win the trick with that card
+            E.add_constraint((~player_plays_card(card1, player, trick_number)) >> ~player_wins_trick(card1, player, trick_number))
+            # Constaint: If a player doesn't have a card, they can't play that card
+            E.add_constraint((~player_has_card(card1, player, trick_number)) >> ~player_plays_card(card1, player, trick_number))
+            # Constraint: If a player has a card but the card doesn't beat every other card, they don't win the trick that card
+            E.add_constraint((~And(card_win_prop) & player_plays_card(card1, player, trick_number)) >> ~player_wins_trick(card1, player, trick_number))
+            # Constraint: If a player has a card, it beats other card, and they play the card, they win the trick with that card and become the starting player in the next trick
+            E.add_constraint((And(card_win_prop) & player_plays_card(card1, player, trick_number)) >> (player_wins_trick(card1, player, trick_number)))
+            # Constraint: If a player wins a trick, they become the starting player in the next trick.
+            E.add_constraint(player_wins_trick(card1, player, trick_number) >> starting_player(player, (trick_number + 1)))
+        # Reset card propositions for each player
+        card_win_prop=[]
+    
+    #Reset the HAS_CARD_PROP and PLAYS_CARD_PROP
     HAS_CARD_PROP.clear()
+    PLAYS_CARD_PROP.clear()
     start_player_prop=[]
 
     # Code that allows players to draw cards
@@ -545,10 +540,6 @@ def example_theory(trick_number, hands, start_player):
         
     #Constraint: Ensure that only one new starting player exists
     constraint.add_exactly_one(E, start_player_prop)
-        
-    PLAYS_CARD_PROP.clear()
-
-    trick_number += 1
 
     return E
 
