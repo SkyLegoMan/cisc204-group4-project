@@ -649,8 +649,23 @@ def run_trick(t, h, s):
 if __name__ == "__main__":
     #STARTING_HANDS = test_round_suits()
     #test_theory3()
-    
     #CARD_DECK = test_card_beats_card()
+
+    # Error checking, to make sure the example.py values are valid (to help guide what needs to be made valid)
+
+    #Verify that a legal Briscola Suit was chosen.
+    if not (BRISCOLA_SUIT in CARD_SUITS):
+        raise ValueError("\nIn briscola_suit, make sure to specify a valid Briscola suit.")
+    
+    for hand in STARTING_HANDS:
+        #Verify that the STARTING_HANDS has exactly 3 cards in each hand.
+        if len(hand) != 3:
+            raise ValueError("\nIn starting_hands, every player must have exactly 3 cards in their respective hands.")
+        #Verify that each card in STARTING_HANDS is a valid card.
+        for card in hand:
+            if not (card in CARDS.keys()):
+                raise ValueError(f"\nIn starting_hands, make sure all cards specified are valid. '{card}' is not valid card.")
+
     hands = STARTING_HANDS
     s_player = starting_player("P1", 1)
     tr = 1
