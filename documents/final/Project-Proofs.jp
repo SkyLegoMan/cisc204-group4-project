@@ -1,0 +1,91 @@
+﻿CONJECTUREPANEL Quiz
+PROOF "actual i1, actual i2, actual i3, actual i4, ∀x.(PC(x)∧¬B(x)), ∀x.(PC(x)∧B(x)), ((PC(i1)∧¬B(i1))∧(PC(i2)∧¬B(i2))∧(PC(i3)∧¬B(i3))∧(PC(i4)∧B(i4)))→PW(i4) ⊢ PW(i4)"
+INFER actual i1,
+     actual i2,
+     actual i3,
+     actual i4,
+     ∀x.(PC(x)∧¬B(x)),
+     ∀x.(PC(x)∧B(x)),
+     ((PC(i1)∧¬B(i1))∧(PC(i2)∧¬B(i2))∧(PC(i3)∧¬B(i3))∧(PC(i4)∧B(i4)))→PW(i4)
+     ⊢ PW(i4)
+FORMULAE
+0 PW(i4),
+1 (PC(i1)∧¬B(i1))∧(PC(i2)∧¬B(i2))∧(PC(i3)∧¬B(i3))∧(PC(i4)∧B(i4)),
+2 (PC(i1)∧¬B(i1))∧(PC(i2)∧¬B(i2))∧(PC(i3)∧¬B(i3))∧(PC(i4)∧B(i4))→PW(i4),
+3 PC(i4)∧B(i4),
+4 (PC(i1)∧¬B(i1))∧(PC(i2)∧¬B(i2))∧(PC(i3)∧¬B(i3)),
+5 PC(i3)∧¬B(i3),
+6 (PC(i1)∧¬B(i1))∧(PC(i2)∧¬B(i2)),
+7 PC(i2)∧¬B(i2),
+8 PC(i1)∧¬B(i1),
+9 actual i1,
+10 ∀x.(PC(x)∧¬B(x)),
+11 PC(x)∧¬B(x),
+12 i1,
+13 x,
+14 actual i2,
+15 i2,
+16 actual i3,
+17 i3,
+18 actual i4,
+19 ∀x.(PC(x)∧B(x)),
+20 PC(x)∧B(x),
+21 i4,
+22 ((PC(i1)∧¬B(i1))∧(PC(i2)∧¬B(i2))∧(PC(i3)∧¬B(i3))∧(PC(i4)∧B(i4)))→PW(i4),
+23 ∀x.(PC(x)∧¬B(x)),
+24 ∀x.(PC(x)∧B(x))
+IS
+SEQ (cut[B,C\3,0]) ("∀ elim"[P,i,x\20,21,13]) (hyp[A\19]) (hyp[A\18]) (cut[B,C\5,0]) ("∀ elim"[P,i,x\11,17,13]) (hyp[A\10]) (hyp[A\16]) (cut[B,C\7,0]) ("∀ elim"[P,i,x\11,15,13]) (hyp[A\10]) (hyp[A\14]) (cut[B,C\8,0]) ("∀ elim"[P,i,x\11,12,13]) (hyp[A\10]) (hyp[A\9]) (cut[B,C\6,0]) ("∧ intro"[A,B\8,7]) (hyp[A\8]) (hyp[A\7]) (cut[B,C\4,0]) ("∧ intro"[A,B\6,5]) (hyp[A\6]) (hyp[A\5]) (cut[B,C\1,0]) ("∧ intro"[A,B\4,3]) (hyp[A\4]) (hyp[A\3]) (cut[B,C\0,0]) ("→ elim"[A,B\1,0]) (hyp[A\2]) (hyp[A\1]) (hyp[A\0])
+END
+CONJECTUREPANEL Quiz
+PROOF "¬P2∧¬P3∧¬P4, P1∨P2∨P3∨P4 ⊢ P1"
+INFER ¬P2∧¬P3∧¬P4,
+     P1∨P2∨P3∨P4 
+     ⊢ P1 
+FORMULAE
+0 ⊥,
+1 P1,
+2 ¬P4,
+3 P4,
+4 ¬P3,
+5 P3,
+6 ¬P2,
+7 P2,
+8 P1∨P2,
+9 P1∨P2∨P3,
+10 P1∨P2∨P3∨P4,
+11 ¬P2∧¬P3,
+12 ¬P2∧¬P3∧¬P4 
+IS
+SEQ (cut[B,C\2,1]) (LAYOUT "∧ elim" (0) ("∧ elim(R)"[A,B\11,2]) (hyp[A\12])) (cut[B,C\11,1]) (LAYOUT "∧ elim" (0) ("∧ elim(L)"[A,B\11,2]) (hyp[A\12])) (cut[B,C\4,1]) (LAYOUT "∧ elim" (0) ("∧ elim(R)"[A,B\6,4]) (hyp[A\11])) (cut[B,C\6,1]) (LAYOUT "∧ elim" (0) ("∧ elim(L)"[A,B\6,4]) (hyp[A\11])) ("∨ elim"[A,B,C\9,3,1]) (hyp[A\10]) ("∨ elim"[A,B,C\8,5,1]) (hyp[A\9]) ("∨ elim"[A,B,C\1,7,1]) (hyp[A\8]) (hyp[A\1]) (cut[B,C\0,1]) ("¬ elim"[B\7]) (hyp[A\7]) (hyp[A\6]) ("contra (constructive)"[B\1]) (hyp[A\0]) (cut[B,C\0,1]) ("¬ elim"[B\5]) (hyp[A\5]) (hyp[A\4]) ("contra (constructive)"[B\1]) (hyp[A\0]) (cut[B,C\0,1]) ("¬ elim"[B\3]) (hyp[A\3]) (hyp[A\2]) ("contra (constructive)"[B\1]) (hyp[A\0])
+END
+CONJECTUREPANEL Quiz
+PROOF "Q∨(¬Q), C1→(¬C2∧¬C3), C3→(¬C1∧¬C2), (Q→C1), (¬Q)→C3 ⊢ ¬C2"
+INFER Q∨(¬Q),
+     C1→(¬C2∧¬C3),
+     C3→(¬C1∧¬C2),
+     (Q→C1),
+     (¬Q)→C3 
+     ⊢ ¬C2 
+FORMULAE
+0 ¬C2,
+1 ¬C1∧¬C2,
+2 ¬C1,
+3 C3,
+4 C3→¬C1∧¬C2,
+5 ¬Q,
+6 ¬Q→C3,
+7 ¬C2∧¬C3,
+8 ¬C3,
+9 C1,
+10 C1→¬C2∧¬C3,
+11 Q,
+12 Q→C1,
+13 Q∨¬Q,
+14 C3→(¬C1∧¬C2),
+15 C1→(¬C2∧¬C3),
+16 (¬Q)→C3,
+17 Q∨(¬Q)
+IS
+SEQ ("∨ elim"[A,B,C\11,5,0]) (hyp[A\13]) (cut[B,C\9,0]) ("→ elim"[A,B\11,9]) (hyp[A\12]) (hyp[A\11]) (cut[B,C\7,0]) ("→ elim"[A,B\9,7]) (hyp[A\10]) (hyp[A\9]) (cut[B,C\0,0]) (LAYOUT "∧ elim" (0) ("∧ elim(L)"[A,B\0,8]) (hyp[A\7])) (hyp[A\0]) (cut[B,C\3,0]) ("→ elim"[A,B\5,3]) (hyp[A\6]) (hyp[A\5]) (cut[B,C\1,0]) ("→ elim"[A,B\3,1]) (hyp[A\4]) (hyp[A\3]) (cut[B,C\0,0]) (LAYOUT "∧ elim" (0) ("∧ elim(R)"[A,B\2,0]) (hyp[A\1])) (hyp[A\0])
+END
