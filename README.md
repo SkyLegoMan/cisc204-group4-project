@@ -24,4 +24,4 @@ We will model if it is possible for Player-1 to win 4 of the 10 possible rounds 
 * `nnf`: Python package used for writting logic into negation normal form, and creating logical theories alongside `bauhaus`. Installed by running `pip install nnf`.
 
 ## How To Run
-To run the model, run the run.py script within the project by running python3 `run.py` in a terminal. If you wish to experiment with changing some parameters inside the model, open the python script `example.py` to change the preset Briscola suit and preset starting hands of each player.
+To run the model, run the `run.py` script within the project by running `python3 run.py` in a terminal. If you wish to experiment with changing some parameters inside the model, open the python script `example.py` to change the preset Briscola suit and preset starting hands of each player.
