@@ -321,6 +321,59 @@ def test_theory3():
                     print(k)
         print("\n")
 
+
+# Function that is called repeatedly to run through several different tricks with different hands and starting players.
+def trick_test(t, h, s):
+    T = example_theory(t, h, s)
+    T = T.compile()
+    S = T.solve()
+    for k in S:
+        if (('starting player' in k._prop_name()) and (f'#{t}' in k._prop_name())):
+            if S[k]:
+                print(f"- {k}")
+    for k in S:
+        if (('starting card' in k._prop_name()) and (f'#{t}' in k._prop_name())):
+            if S[k]:
+                print(f"- {k}")
+    print("\n")
+    for k in S:
+        if (('plays' in k._prop_name()) and (f'#{t}' in k._prop_name())):
+            if S[k]:
+                print(f"- {k}")
+    print("\n")
+    for k in S:
+        if (('wins' in k._prop_name()) and (f'#{t}' in k._prop_name())):
+            if S[k]:
+                print(f"- {k}")
+    print("\n")
+    for k in S:
+        if (('draws' in k._prop_name()) and (f'#{t}' in k._prop_name())):
+            if S[k]:
+                print(f"- {k}")
+    print("\n")
+    for k in S:
+        if (('Swords\' beats' in k._prop_name()) and (f'#{t}' in k._prop_name())):
+            if S[k]:
+                print(k)
+    print("\n")
+    for k in S:
+        if (('Cups\' beats' in k._prop_name()) and (f'#{t}' in k._prop_name())):
+            if S[k]:
+                print(k)
+    print("\n")
+    for k in S:
+        if (('Coins\' beats' in k._prop_name()) and (f'#{t}' in k._prop_name())):
+            if S[k]:
+                print(k)
+    print("\n")
+    for k in S:
+        if (('Clubs\' beats' in k._prop_name()) and (f'#{t}' in k._prop_name())):
+            if S[k]:
+                print(k)
+
+    return S
+
+
     # While debuging the program to try and see which card wins with what cards, I noticed that round suits didn't seem to be winning when they should have been.
     # So this test function was to pass in a a card set to see what will happen if I pass in no Briscola suits and only potnetial round suits.
 def test_round_suits():
@@ -336,14 +389,21 @@ def test_round_suits():
                     ["4 of Clubs"],
                     ["J of Clubs"],
                     ["A of Clubs"]]
-    return test_hand1
+    test_hand4 = [["2 of Clubs"],
+                    ["4 of Clubs"],
+                    ["5 of Clubs"],
+                    ["6 of Clubs"]]
+    return test_hand4
 
 # Test case with a smaller pre-defined deck to be able to track what cards are drawn/played.
 def test_card_beats_card():
-    sample_deck = ['A of Cups', '7 of Cups', '2 of Swords', 'A of Coins','H of Swords',
+    sample_deck1 = ['A of Cups', '7 of Cups', '2 of Swords', 'A of Coins','H of Swords',
             '4 of Clubs', 'A of Swords','J of Clubs','K of Coins', 'A of Clubs','3 of Coins','5 of Cups', 
             '7 of Clubs', '4 of Coins', 'H of Clubs', '5 of Coins', 'K of Clubs', 'H of Coins', 'J of Coins', 'K of Swords']
-    return sample_deck
+    sample_deck2 = ['2 of Clubs', '4 of Clubs', '5 of Clubs', '6 of Clubs','7 of Clubs',
+            'J of Clubs', 'H of Clubs','K of Clubs','3 of Clubs', 'A of Clubs', '2 of Coins', '4 of Coins', '5 of Coins', '6 of Coins','7 of Coins',
+            'J of Coins', 'H of Coins','K of Coins','3 of Coins', 'A of Coins']
+    return sample_deck2
     
 
 # Example theory that defines the model's theory for a single trick. 
@@ -522,8 +582,18 @@ def example_theory(trick_number, hands, start_player):
     PLAYS_CARD_PROP.clear()
     start_player_prop=[]
 
+    start_player_i = 0
     # Code that allows players to draw cards
-    for player1 in PLAYERS.keys():
+    for player in PLAYERS.keys():
+        # First, find the starting player index
+        if player == start_player.player:
+            break
+        else:
+            start_player_i += 1
+    
+    # Use a for loop, since we can't use indexes on dictionaries
+    for i in range(4):
+        player1 = f"P{start_player_i + 1}"
         if len(CARD_DECK) != 0:
             drawn_card = CARD_DECK.pop(0)
             HAS_CARD_PROP.append(player_has_card(drawn_card, player1, (trick_number + 1)))
@@ -535,8 +605,10 @@ def example_theory(trick_number, hands, start_player):
                     continue
                 # Constraint: A second player does not have a card another player already has in their hand
                 E.add_constraint(~player_has_card(drawn_card, player2, (trick_number + 1)))
-            
+    
         start_player_prop.append(starting_player(player1, (trick_number + 1)))
+        # Make sure that start_player_i is in range
+        start_player_i = (start_player_i + 1) % 4
         
     #Constraint: Ensure that only one new starting player exists
     constraint.add_exactly_one(E, start_player_prop)
@@ -547,7 +619,6 @@ def example_theory(trick_number, hands, start_player):
 def run_trick(t, h, s):
     T = example_theory(t, h, s)
     T = T.compile()
-
     S = T.solve()
     for k in S:
         if (('starting player' in k._prop_name()) and (f'#{t}' in k._prop_name())):
@@ -578,6 +649,7 @@ def run_trick(t, h, s):
 if __name__ == "__main__":
     #STARTING_HANDS = test_round_suits()
     #test_theory3()
+    
     #CARD_DECK = test_card_beats_card()
     hands = STARTING_HANDS
     s_player = starting_player("P1", 1)
@@ -590,6 +662,7 @@ if __name__ == "__main__":
         hand_i += 1
     print(LINE)
     while (len(hands[0]) != 0):
+        #T = trick_test(tr, hands, s_player)
         T = run_trick(tr, hands, s_player)
         for k in T:
             for hand in hands:
@@ -668,4 +741,4 @@ if __name__ == "__main__":
         print("\nTheres a tie! Between the players:")
         for winner in winners:
             print(winner)
-
+    
