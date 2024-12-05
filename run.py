@@ -12,14 +12,14 @@ from example import briscola_suit, starting_hands
 # Encoding that will store all of your constraints
 E = Encoding()
 
-# Players
+# The four players, with the dictionary value being the number of wins each player has. The number of wins is initialized to be (0).
 PLAYERS={'P1':0,'P2':0,'P3':0,'P4':0}
 
 # Card suits and values
 CARD_SUITS=['Swords', 'Coins', 'Clubs', 'Cups']
 CARD_VALUES=['2','4','5','6','7','J','H','K','3','A']
 
-# CARDS is a dictionary of cards tat specify suit and value, whilst CARD_DECK is just a list of card names
+# CARDS is a dictionary of cards that specify suit and value, whilst CARD_DECK is just a list of card names
 CARDS = {}
 CARD_DECK = []
 
@@ -72,7 +72,7 @@ class card_is_brisc:
         return f"'{CARDS[self.card]['suit']}' is apart of '{self.brisc_suit}', the current briscola suit."
     
 
-# New proposition to say that a card is the current suit leading the round of the round or not
+# New proposition to say that a card is apart of the round suit of the current trick or not
 @proposition(E)
 class card_is_suit_of_round:
 
@@ -142,7 +142,7 @@ class player_has_card:
     def _prop_name(self):
         return f"{self.player} has the card '{self.card}' on trick #{self.trick_num}"
     
-# New proposition to say that a player wins a trick, given a round configuration and player.
+# New proposition to say if a player wins a trick with a card they played or not.
 @proposition(E)
 class player_wins_trick:
 
@@ -212,7 +212,9 @@ class player_draws_card:
         return f"{self.player} draws the card '{self.card}' on trick #{self.trick_num}"
 
 
-# This test theory was a function used to attempt to see some more aspects present in the propositions the model was choosing.
+'''This test function was used for checking 2 tricks statically, and printed output regarding round suits, 
+starting players and cards, which cards players had in their hands, which cards players played on tricks 1 
+and 2, and who won each round.'''
 def test_theory1():
     T = example_theory()
     T = T.compile()
@@ -262,7 +264,10 @@ def test_theory1():
 
 # This test theory was a function used to attempt to see some more aspects present in the propositions the model was choosing.
 # This one in particular had a for loop to loop through several cases (this test_theory was created with an older iterative system in mind)
-def test_theory3():
+'''This test function is very similar to (test_theory1()), but was also able to check more than 2 tricks 
+through a for-loop. It also had additional output to check which players drew cards on any trick, and 
+which suits would beat what cards on any trick.'''
+def test_theory2():
     T = example_theory()
     T = T.compile()
     print("\nSatisfiable: %s" % T.satisfiable())
@@ -323,6 +328,8 @@ def test_theory3():
 
 
 # Function that is called repeatedly to run through several different tricks with different hands and starting players.
+'''This test function is called repeatedly to run through several different tricks with different hands 
+and starting players. It also prints which suits beat what so the card interactions could be checked.'''
 def trick_test(t, h, s):
     T = example_theory(t, h, s)
     T = T.compile()
@@ -373,10 +380,9 @@ def trick_test(t, h, s):
 
     return S
 
-
-    # While debuging the program to try and see which card wins with what cards, I noticed that round suits didn't seem to be winning when they should have been.
-    # So this test function was to pass in a a card set to see what will happen if I pass in no Briscola suits and only potnetial round suits.
-def test_round_suits():
+'''This test function is used to change the player hands, with the return value being changed
+to the desired (test_hand) variable.'''
+def test_player_hands():
     test_hand1 = [["A of Cups", "7 of Cups", "2 of Coins"],
                     ["A of Coins","H of Cups","4 of Clubs"],
                     ["3 of Cups","J of Clubs","K of Coins"],
@@ -395,8 +401,9 @@ def test_round_suits():
                     ["6 of Clubs"]]
     return test_hand4
 
-# Test case with a smaller pre-defined deck to be able to track what cards are drawn/played.
-def test_card_beats_card():
+'''This test function is used to assign a "sample deck" instead of having a randomized deck.
+It returns the desired (sample_deck) variable.'''
+def test_deck():
     sample_deck1 = ['A of Cups', '7 of Cups', '2 of Swords', 'A of Coins','H of Swords',
             '4 of Clubs', 'A of Swords','J of Clubs','K of Coins', 'A of Clubs','3 of Coins','5 of Cups', 
             '7 of Clubs', '4 of Coins', 'H of Clubs', '5 of Coins', 'K of Clubs', 'H of Coins', 'J of Coins', 'K of Swords']
@@ -647,9 +654,9 @@ def run_trick(t, h, s):
     return S
 
 if __name__ == "__main__":
-    #STARTING_HANDS = test_round_suits()
-    #test_theory3()
-    #CARD_DECK = test_card_beats_card()
+    #STARTING_HANDS = test_player_hands()
+    #test_theory2()
+    #CARD_DECK = test_deck()
 
     # Error checking, to make sure the example.py values are valid (to help guide what needs to be made valid)
 
